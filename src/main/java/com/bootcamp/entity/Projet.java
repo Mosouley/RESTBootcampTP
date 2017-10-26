@@ -17,7 +17,9 @@ import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
+import javax.ws.rs.core.Link;
 
 
 /**
@@ -32,6 +34,18 @@ public class Projet implements Serializable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+
+    //idem introduction d'un attribut link pour JAX-RS2
+    @Transient //car ce n'est pas nécessaire de sauvegarder
+    private Link self;
+
+    public Link getSelf() {
+        return self;
+    }
+
+    public void setSelf(Link self) {
+        this.self = self;
+    }
     
     @NotNull(message = "le nom du projet est obligatoire et ne peut �tre vide")
     @Column( nullable = false,length=45)

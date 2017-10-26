@@ -10,6 +10,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
+import javax.xml.bind.annotation.XmlRootElement;
 
 
 /**
@@ -20,6 +21,7 @@ import javax.persistence.OneToMany;
  */
 @Entity  
 @DiscriminatorValue("BAILLEUR")
+
 public class Bailleur extends Personne {
  
     @Enumerated(EnumType.STRING)

@@ -12,7 +12,9 @@ import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
+import javax.ws.rs.core.Link;
 
 /**
  *
@@ -33,6 +35,20 @@ public class Personne implements Serializable{
     @NotNull(message = "La colonne nom ne peut �tre vide")
     @Column(nullable = false,length = 45)
     protected String nom; //second champ commun � la hierarchie
+
+    //Introduction d'un lien propre à chaque entite, et comme entite personne est la mere de 3 autres
+    //l'insertion se fera à son niveau
+    @Transient
+    private Link self; // utilisant l'API JAX-RS 2
+
+    public Link getSelf() {
+        return self;
+    }
+
+    public void setSelf(Link self) {
+        this.self = self;
+    }
+
 
     public String getNom() {
         return nom;

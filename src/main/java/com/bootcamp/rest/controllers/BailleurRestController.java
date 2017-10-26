@@ -19,8 +19,11 @@ import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 /**
  *
@@ -32,13 +35,35 @@ public class BailleurRestController {
     //instanciation d'un bailleur repository
     BailleurRepository bailleurRepository = new BailleurRepository("PostgresPuWeb");
 
+    //Annotation JAX-RS2
+    @Context
+    UriInfo uriInfo;
+    
     @GET
     @Path("/list")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces( MediaType.APPLICATION_JSON)
     public Response getList() throws SQLException {
         List<Bailleur> bailleurs = bailleurRepository.findAll();
-        //access par le concept CORS
-        return Response.status(200).entity(bailleurs).header("Access-Control-Allow-Origin", "*").build();
+//         List<Projet> projets;
+        //Pour chaque bailleur definir son link
+        //pour chaque bailleur faire un lien vers sa liste de projets
+        //pour chaque bailleur faire un lien vers sa liste de projets
+        //mise en oeuvre de l'implementation Hateoas
+        System.out.println(uriInfo.getAbsolutePath());
+        bailleurs.stream().map((bailleur) -> {
+            bailleur.setSelf(
+                    Link.fromUri(uriInfo.getAbsolutePath())
+                            .rel("self")
+                            .type("GET")
+                            .build());
+            return bailleur;
+        }).forEach((bailleur) -> {
+            Response.accepted(bailleur)
+                    .links(bailleur.getSelf())
+                    .build();
+        });
+
+        return Response.accepted(bailleurs).build();
 
     }
 
