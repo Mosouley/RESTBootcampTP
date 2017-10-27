@@ -23,6 +23,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 /**
@@ -49,13 +50,22 @@ public class BailleurRestController {
         //pour chaque bailleur faire un lien vers sa liste de projets
         //pour chaque bailleur faire un lien vers sa liste de projets
         //mise en oeuvre de l'implementation Hateoas
-        System.out.println(uriInfo.getAbsolutePath());
+       //boucle for sur chaque bailleur
+       //Introduire son champ self (lui-meme) qui fait reference à son lien
         bailleurs.stream().map((bailleur) -> {
+//            UriBuilder.fromUri(uriInfo.getAbsolutePath())
+//                    .path("pers/{id}")
+//                    .queryParam("id", "{id}")
+//                    .build("user", "sam");
             bailleur.setSelf(
                     Link.fromUri(uriInfo.getAbsolutePath())
                             .rel("self")
                             .type("GET")
                             .build());
+
+//            Link.fromUri(uriInfo.getBaseUriBuilder()
+//                            .path(getClass()).path(getClass(), "retrieveBook")
+//                            .build(book1.getISBN())).rel("book1").type("GET").build());
             return bailleur;
         }).forEach((bailleur) -> {
             Response.accepted(bailleur)
@@ -75,7 +85,12 @@ public class BailleurRestController {
         Bailleur bailleur = bailleurRepository.findByPropertyUnique("id", id);
 
         if (bailleur != null) {
-            return Response.status(200).entity(bailleur).build();
+            bailleur.setSelf(
+                    Link.fromUri(uriInfo.getAbsolutePath())
+                            .rel("self")
+                            .type("GET")
+                            .build());
+            return Response.accepted(bailleur).links(bailleur.getSelf()).build();
         } else {
             return Response.status(404).entity(bailleur).build();
         }
