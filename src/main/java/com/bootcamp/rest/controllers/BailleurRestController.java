@@ -4,6 +4,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import com.bootcamp.entity.Bailleur;
+import com.bootcamp.entity.Bailleurs;
 import com.bootcamp.jpa.repository.BailleurRepository;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
@@ -12,10 +13,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.PathParam;
@@ -31,7 +34,7 @@ import javax.ws.rs.core.UriInfo;
  *
  * @author Ibrahim
  */
-@Path("/bailleur")
+@Path("/bailleurs")
 public class BailleurRestController {
 
     //instanciation d'un bailleur repository
@@ -40,30 +43,79 @@ public class BailleurRestController {
     //Annotation JAX-RS2
     @Context
     UriInfo uriInfo;
-    
+
     /**
      *
+     * @param start
+     * @param size
      * @param uriInfo
      * @return
      */
     @GET
-    @Path("/list")
-    @Produces( MediaType.APPLICATION_JSON)
-    public Response getList(@Context UriInfo uriInfo) throws SQLException {
-        UriBuilder nextLinkBuilder = uriInfo.getAbsolutePathBuilder();
-        nextLinkBuilder.queryParam("start", 5);
-        nextLinkBuilder.queryParam("size", 10);
-        URI next = nextLinkBuilder.build();
+//    @Path("/list")
+    @Produces(MediaType.APPLICATION_JSON)
+//    @org.jboss.resteasy.annotations.providers.jaxb.Formatted
+//    public Bailleurs getBailleurs(@Context UriInfo uriInfo) throws SQLException {
+//                        //definition des URI permettant d'obtenir le previous et le next de tout bailleur
+//                        //aussi les parametres de pagination son
+    public Bailleurs getBailleurs(@QueryParam("start") int start,
+            @QueryParam("size") @DefaultValue("2") int size,
+            @Context UriInfo uriInfo) throws SQLException {
+
+        //Determination du Builder
+        UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+        builder.queryParam("start", "{start}");
+        builder.queryParam("size", "{size}");
+//
+//        UriBuilder nextLinkBuilder = uriInfo.getAbsolutePathBuilder();
+//        nextLinkBuilder.queryParam("start", 5);
+//        nextLinkBuilder.queryParam("size", 10);
+//        URI next = nextLinkBuilder.build();
         List<Bailleur> bailleurs = bailleurRepository.findAll();
-//         List<Projet> projets;
+
+        ArrayList<Link> links = new ArrayList<Link>();
+        ArrayList<Bailleur> list = new ArrayList<>();
+        synchronized (bailleurs) {
+            int i = 0;
+            for (Bailleur bailleur : bailleurs) {
+                if (i >= start && i < start + size) {
+                    list.add(bailleur);
+                }
+                i++;
+            }
+        }
+//
+        // next link
+        if (start + size < bailleurs.size()) {
+            int next = start + size;
+            URI nextUri = builder.clone().build(next, size);
+            Link nextLink = Link.fromUri(nextUri)
+                    .rel("next").type("application/json").build();
+            links.add(nextLink);
+        }
+        // previous link
+        if (start > 0) {
+            int previous = start - size;
+            if (previous < 0) {
+                previous = 0;
+            }
+            URI previousUri = builder.clone().build(previous, size);
+            Link previousLink = Link.fromUri(previousUri)
+                    .rel("previous")
+                    .type("application/json").build();
+            links.add(previousLink);
+        }
+
+        //         List<Projet> projets;
         //Pour chaque bailleur definir son link
         //pour chaque bailleur faire un lien vers sa liste de projets
         //pour chaque bailleur faire un lien vers sa liste de projets
         //mise en oeuvre de l'implementation Hateoas
-       //boucle for sur chaque bailleur
-       //Introduire son champ self (lui-meme) qui fait reference à son lien
-        bailleurs.stream().map((bailleur) -> {
-     //pour chaque bailleur dans la liste
+        //boucle for sur chaque bailleur
+        //Introduire son champ self (lui-meme) qui fait reference à son lien
+
+            for (Bailleur bailleur : bailleurs) {
+                 //pour chaque bailleur dans la liste
      //trouver l'URI vers sa ressource provenant de la recherche par id se trouvant dans la methode getbyId
 
 //    UriBuilder builder = UriBuilder.fromUri(uriInfo.getRequestUri());
@@ -77,33 +129,62 @@ public class BailleurRestController {
                             .build(bailleur.getId()))
                                 .rel(bailleur.getNom())
                                 .type("GET").build();
-//            UriBuilder.fromUri(uriInfo.getAbsolutePath())
-//                    .path("pers/{id}")
-//                    .queryParam("id", "{id}")
-//                    .build("user", "sam");
-//            bailleur.setSelf(
-//                    Link.fromUri(uriInfo.getAbsolutePath())
-//                            .rel("self")
-//                            .type("GET")
-//                            .build());
-//                bailleur.setSelf(
-//                    Link.fromUri(uri)
-//                            .rel("self")
-//                            .type("GET")
-//                            .build());
-        //setter pour fixer le lien vers cette ressource
-                bailleur.setSelf(lien);
-//            
-            return bailleur;
-        }).forEach((bailleur) -> {
-            Response.accepted(bailleur)
+         bailleur.setSelf(lien);
+         Response.accepted(bailleur)
                     .links(bailleur.getSelf())
-                    
+
                      .build();
-        });
+         //setter pour fixer le lien vers cette ressource
+                bailleur.setSelf(lien);
+            }
+        Bailleurs listBailleurs = new Bailleurs();
+        //on la remplit de la liste provenant de la base de donnée
+        listBailleurs.setBailleurs(bailleurs);
+        //on lui met ses liens
+        listBailleurs.setLinks(links);
+        //on retourne la reponse à la requete
+        return listBailleurs;
 
-        return Response.accepted(bailleurs).build();
-
+//        bailleurs.stream().map((bailleur) -> {
+//     //pour chaque bailleur dans la liste
+//     //trouver l'URI vers sa ressource provenant de la recherche par id se trouvant dans la methode getbyId
+//
+////    UriBuilder builder = UriBuilder.fromUri(uriInfo.getRequestUri());
+//////        builder.host("{hostname}");
+////        builder.path(BailleurRestController.class,"getById");
+////        UriBuilder clone = builder.clone();
+////            URI uri = clone.build(uriInfo.getPath(), bailleur.getId());
+//         Link lien=Link.fromUri(uriInfo.getBaseUriBuilder()
+//                            .path(getClass())
+//                            .path(getClass(), "getById")
+//                            .build(bailleur.getId()))
+//                                .rel(bailleur.getNom())
+//                                .type("GET").build();
+////            UriBuilder.fromUri(uriInfo.getAbsolutePath())
+////                    .path("pers/{id}")
+////                    .queryParam("id", "{id}")
+////                    .build("user", "sam");
+////            bailleur.setSelf(
+////                    Link.fromUri(uriInfo.getAbsolutePath())
+////                            .rel("self")
+////                            .type("GET")
+////                            .build());
+////                bailleur.setSelf(
+////                    Link.fromUri(uri)
+////                            .rel("self")
+////                            .type("GET")
+////                            .build());
+//        
+////
+//            return bailleur;
+//        }).forEach((bailleur) -> {
+//            Response.accepted(bailleur)
+//                    .links(bailleur.getSelf())
+//
+//                     .build();
+//        });
+//        return Response.accepted(bailleurs).build();
+//on fait appel à la ressource Bailleurs qui est une collection de la ressource BAilleur
     }
 
     @GET
@@ -116,9 +197,9 @@ public class BailleurRestController {
         if (bailleur != null) {
             bailleur.setSelf(
                     Link.fromUri(uriInfo.getAbsolutePath())
-                            .rel("self")
-                            .type("GET")
-                            .build());
+                    .rel("self")
+                    .type("GET")
+                    .build());
             return Response.accepted(bailleur).links(bailleur.getSelf()).build();
         } else {
             return Response.status(404).entity(bailleur).build();
