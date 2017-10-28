@@ -10,6 +10,7 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -40,10 +41,19 @@ public class BailleurRestController {
     @Context
     UriInfo uriInfo;
     
+    /**
+     *
+     * @param uriInfo
+     * @return
+     */
     @GET
     @Path("/list")
     @Produces( MediaType.APPLICATION_JSON)
-    public Response getList() throws SQLException {
+    public Response getList(@Context UriInfo uriInfo) throws SQLException {
+        UriBuilder nextLinkBuilder = uriInfo.getAbsolutePathBuilder();
+        nextLinkBuilder.queryParam("start", 5);
+        nextLinkBuilder.queryParam("size", 10);
+        URI next = nextLinkBuilder.build();
         List<Bailleur> bailleurs = bailleurRepository.findAll();
 //         List<Projet> projets;
         //Pour chaque bailleur definir son link
@@ -53,24 +63,43 @@ public class BailleurRestController {
        //boucle for sur chaque bailleur
        //Introduire son champ self (lui-meme) qui fait reference à son lien
         bailleurs.stream().map((bailleur) -> {
+     //pour chaque bailleur dans la liste
+     //trouver l'URI vers sa ressource provenant de la recherche par id se trouvant dans la methode getbyId
+
+//    UriBuilder builder = UriBuilder.fromUri(uriInfo.getRequestUri());
+////        builder.host("{hostname}");
+//        builder.path(BailleurRestController.class,"getById");
+//        UriBuilder clone = builder.clone();
+//            URI uri = clone.build(uriInfo.getPath(), bailleur.getId());
+         Link lien=Link.fromUri(uriInfo.getBaseUriBuilder()
+                            .path(getClass())
+                            .path(getClass(), "getById")
+                            .build(bailleur.getId()))
+                                .rel(bailleur.getNom())
+                                .type("GET").build();
 //            UriBuilder.fromUri(uriInfo.getAbsolutePath())
 //                    .path("pers/{id}")
 //                    .queryParam("id", "{id}")
 //                    .build("user", "sam");
-            bailleur.setSelf(
-                    Link.fromUri(uriInfo.getAbsolutePath())
-                            .rel("self")
-                            .type("GET")
-                            .build());
-
-//            Link.fromUri(uriInfo.getBaseUriBuilder()
-//                            .path(getClass()).path(getClass(), "retrieveBook")
-//                            .build(book1.getISBN())).rel("book1").type("GET").build());
+//            bailleur.setSelf(
+//                    Link.fromUri(uriInfo.getAbsolutePath())
+//                            .rel("self")
+//                            .type("GET")
+//                            .build());
+//                bailleur.setSelf(
+//                    Link.fromUri(uri)
+//                            .rel("self")
+//                            .type("GET")
+//                            .build());
+        //setter pour fixer le lien vers cette ressource
+                bailleur.setSelf(lien);
+//            
             return bailleur;
         }).forEach((bailleur) -> {
             Response.accepted(bailleur)
                     .links(bailleur.getSelf())
-                    .build();
+                    
+                     .build();
         });
 
         return Response.accepted(bailleurs).build();
